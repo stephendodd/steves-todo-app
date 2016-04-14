@@ -22,12 +22,19 @@
       //Create TodoItemTable
 
       var TodoItemTableList = React.createClass({
+
+        deleteRowItem: function(itemId) {
+          //console.log("itemId");
+          this.props.deleteRowItem(itemId);
+        },
         render: function() {
           var rows = [];
           var i = 1;
           //loop through each item and create a TodoItemTableRow component with each item.
           this.props.items.forEach(function(item) {
-            rows.push(<TodoItemTableRow item={item} i={i} key={item.id} />);
+            // rows.push(<TodoItemTableRow item={item} i={i} key={item.id} deleteRowItem={this.deleteRowItem} />);
+            rows.push(<TodoItemTableRow item={item} i={i} key={item.id} deleteRowItem={this.deleteRowItem}/>);
+            //rows.push(<TodoItemTableRow item={item} i={i} key={item.id} id={item.id} onTodoItemDelete={this.handleTodoItemRemove} />);
             i++
           }.bind(this));
           return (
@@ -49,6 +56,11 @@
       //Create TodoItemTableRow
       //TodoItemTableRow is a row with id and todoTask columns
       var TodoItemTableRow = React.createClass({
+
+        deleteRowItem: function() {
+          this.props.deleteRowItem(this.props.item.id);
+        },
+
         render: function() {
           return (
             <tr>
@@ -57,6 +69,10 @@
               </td>
               <td>
                 {this.props.item.todoTask}
+              </td>
+              <td>
+
+                <input type="button" className="removeBtn" value="Remove" onClick={this.deleteRowItem}/>
               </td>
             </tr>
           );
@@ -120,6 +136,27 @@
           setInterval(this.loadCommentsFromServer,2000);
         },
 
+        deleteRowItem: function(itemId) {
+
+          var index = -1;
+          var todoItemLength = this.state.items.length;
+          for (var i = 0; i < todoItemLength; i++) {
+          //this.props.items.forEach(function(item) {
+            if(this.state.items[i].id === itemId) {
+              index = i;
+              break;
+              }
+          }
+          this.removeItemAjax(this.state.items[index].id);
+          this.state.items.splice(index, 1);
+          var newItems = this.state.items;
+          console.log(newItems);
+
+          /*this.setState({
+            items:newItems
+          });*/
+        },
+
         handleUserInput: function(inputText) {
           this.setState({
             inputText:inputText
@@ -132,37 +169,58 @@
             var items = this.state.items;
             item.id = this.state.items.length + 1;
             var newItems = items.concat([item]);
-            /*
-            this.props.items.push({
-              //"id": this.props.items.length + 1,
-              "id": 3,
-              "todoTask": item
-            });*/
 
-            this.setState({
+            /*this.setState({
               items:newItems,
               inputText:""
-            });
+            });*/
 
-            $.ajax({
-              url: this.props.url,
-              dataType: "json",
-              type: "POST",
-              data: item,
-              success: function(data) {
-                this.setState({
-                  items:data
-                });
-              }.bind(this),
-              error: function(xhr, status, err) {
-                this.setState({
-                  items: items
-                });
-                console.error(this.props.url, status, err.toString());
-              }.bind(this)
-            });
+            this.addItemAjax(item);
 
           }
+        },
+
+        addItemAjax: function(item) {
+          $.ajax({
+            url: this.props.url,
+            dataType: "json",
+            type: "POST",
+            data: item,
+            success: function(data) {
+              this.setState({
+                items:data,
+                inputText:""
+              });
+            }.bind(this),
+            error: function(xhr, status, err) {
+              this.setState({
+                items: items
+
+              });
+              console.error(this.props.url, status, err.toString());
+            }.bind(this)
+          });
+        },
+
+        removeItemAjax: function(itemId) {
+          $.ajax({
+            url: this.props.url+"/"+itemId,
+            dataType: "json",
+            type: "POST",
+            data: {_method: "delete"},
+            success: function(data) {
+              console.log("the data is" + data);
+              this.setState({
+                items:data
+              });
+            }.bind(this),
+            error: function(xhr, status, err) {
+              this.setState({
+                items: items
+              });
+              console.error(this.props.url, status, err.toString());
+            }.bind(this)
+          });
         },
 
         getInitialState: function() {
@@ -184,6 +242,7 @@
               />
               <TodoItemTableList
                 items={this.state.items}
+                deleteRowItem={this.deleteRowItem}
               />
             </div>
           );
